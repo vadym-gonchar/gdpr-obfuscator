@@ -3,13 +3,9 @@ import hashlib
 import pandas as pd
 import logging
 
-logging.basicConfig(level=logging.INFO)
+from config import SUPPORTED_FORMATS, SUPPORTED_STRATEGIES
+
 logger = logging.getLogger(__name__)
-
-MAX_FILE_SIZE = 1_000_000
-SUPPORTED_FORMATS = ['csv', 'json', 'parquet']
-SUPPORTED_STRATEGIES = ['mask', 'hash']
-
 
 def read_df_from_bytes(file_format, data):
     if file_format not in SUPPORTED_FORMATS:
