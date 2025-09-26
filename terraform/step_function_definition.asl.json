@@ -1,0 +1,15 @@
+{
+  "Comment": "Step Function to invoke Lambda obfuscator_tool",
+  "StartAt": "InvokeLambda",
+  "States": {
+    "InvokeLambda": {
+      "Type": "Task",
+      "Resource": "${lambda_arn}",
+      "Parameters": {
+        "Input.$": "$"
+      },
+      "ResultPath": "$.lambda_result",
+      "End": true
+    }
+  }
+}
