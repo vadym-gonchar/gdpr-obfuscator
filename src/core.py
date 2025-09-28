@@ -1,9 +1,8 @@
 import io
-import hashlib
 import pandas as pd
 import logging
 
-from config import SUPPORTED_FORMATS, SUPPORTED_STRATEGIES
+from config import SUPPORTED_FORMATS
 
 logger = logging.getLogger(__name__)
 
@@ -31,18 +30,9 @@ def obfuscate_value_mask(value):
     return "****"
 
 
-def obfuscate_value_hash(value):
-    if pd.isna(value):
-        return value
-    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()
-
-
-def obfuscate_df(df, pii_fields, strategy="mask"):
+def obfuscate_df(df, pii_fields):
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input data is not a pandas DataFrame")
-    
-    if strategy not in SUPPORTED_STRATEGIES:
-        raise ValueError(f"Unknown obfuscation strategy: {strategy}")
     
     if not pii_fields:
         logger.warning("No PII fields specified, returning original DataFrame")
@@ -58,12 +48,11 @@ def obfuscate_df(df, pii_fields, strategy="mask"):
         logger.warning("None of the specified PII fields found in data")
         return df.copy()
     
-    obfuscator = obfuscate_value_mask if strategy == "mask" else obfuscate_value_hash
     result_df = df.copy()
     
     for field in existing_fields:
         logger.info(f"Obfuscating field: {field}")
-        result_df[field] = result_df[field].apply(obfuscator)
+        result_df[field] = result_df[field].apply(obfuscate_value_mask)
     
     return result_df
 
