@@ -14,13 +14,12 @@ def lambda_handler(event, context):
         params = event.get("Input", event)
         result = obfuscate_data(params, return_bytes=False)
         logger.info("File obfuscated successfully")
-        # Return a flat structure, which is easier for Step Functions to process
         return result
 
     except ValueError as e:
-        logger.error(f"A validation error occurred: {str(e)}")
+        logger.error("A validation error occurred: " + str(e))
         raise  # Re-raise the exception to let Lambda runtime handle it
 
     except Exception as e:
-        logger.exception("Unexpected error in lambda_handler")
+        logger.exception("Unexpected error in lambda_handler: " + str(e))
         raise  # Re-raise for detailed error logging
