@@ -125,8 +125,10 @@ def obfuscate_data(params, return_bytes=True):
         raise ValueError(f"Failed to save obfuscated file to S3: {str(e)}")
     
     if return_bytes:
+        # output_bytes = b'...' (obfuscated file content in bytes)
         return output_bytes
     else:
+        # Return a summary dictionary instead of raw bytes
         return {
             "status": "success",
             "original_size": len(body),
