@@ -1,4 +1,3 @@
-import boto3
 import logging
 from urllib.parse import urlparse
 from core import read_df_from_bytes, obfuscate_df, write_df_to_bytes
@@ -53,7 +52,7 @@ def get_file_format(object_key):
     return file_format
 
 
-def obfuscate_data(params, return_bytes=True):
+def obfuscate_data(params, s3_client, return_bytes=True):
     if not isinstance(params, dict):
         raise ValueError("Step Function must pass event as a JSON object")
 
@@ -67,13 +66,6 @@ def obfuscate_data(params, return_bytes=True):
 
     if not pii_fields or not isinstance(pii_fields, list):
         raise ValueError("Missing or invalid required parameter: pii_fields (list expected)")
-    
-    try:
-        # boto3 looks for credentials in ~/.aws/credentials and creates the client.
-        # s3_client = botocore.client.S3 object has methods like get_object, etc to interact with S3. 
-        s3_client = boto3.client("s3")
-    except Exception as e:
-        raise ValueError(f"Failed to initialize S3 client: {str(e)}")
     
     logger.info(f"Processing S3 object: s3://{bucket_name}/{object_key}")
     
