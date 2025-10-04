@@ -199,9 +199,17 @@ def obfuscate_data(params, s3_client, return_bytes=True):
         raise ValueError("Step Function must pass event as a JSON object")
 
     if "file_to_obfuscate" not in params:
+    # Handle different input formats: either a full S3 URI or separate bucket/key.
+    if "file_to_obfuscate" in params:
+        bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
+    elif "s3_bucket" in params and "s3_key" in params:
+        bucket_name = params["s3_bucket"]
+        object_key = params["s3_key"]
+    else:
         raise ValueError("Missing required parameter: file_to_obfuscate")
     
     bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
+    # bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
     pii_fields = params.get("pii_fields")
 
     if not pii_fields or not isinstance(pii_fields, list):
