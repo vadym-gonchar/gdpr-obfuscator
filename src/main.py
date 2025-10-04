@@ -1,3 +1,7 @@
+"""
+Command-line entry point for the GDPR Obfuscator tool.
+Allows running the obfuscation process locally by passing parameters as a JSON string.
+"""
 import sys
 import json
 import boto3
