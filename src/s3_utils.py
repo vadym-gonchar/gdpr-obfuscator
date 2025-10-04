@@ -1,5 +1,6 @@
 import logging
 from urllib.parse import urlparse
+from botocore.exceptions import ClientError
 from core import read_df_from_bytes, obfuscate_df, write_df_to_bytes
 from config import MAX_FILE_SIZE, SUPPORTED_FORMATS
 
@@ -52,6 +53,53 @@ def get_file_format(object_key):
     return file_format
 
 
+def _validate_and_get_s3_metadata(s3_client, bucket_name, object_key):
+    """Validates S3 object metadata (existence, size)."""
+    try:
+        head = s3_client.head_object(Bucket=bucket_name, Key=object_key)
+        content_length = head.get("ContentLength", 0)
+        if content_length > MAX_FILE_SIZE:
+            raise ValueError(f"File too large: {content_length} bytes (max {MAX_FILE_SIZE})")
+        if content_length == 0:
+            raise ValueError(f"File is empty: s3://{bucket_name}/{object_key}")
+        return head
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'NoSuchKey':
+            raise ValueError(f"File not found: s3://{bucket_name}/{object_key}")
+        else:
+            # Handle other client errors like access denied
+            logger.error(f"S3 client error on head_object: {e}")
+            raise ValueError(f"Could not access file metadata: {e}")
+
+
+def _download_s3_object(s3_client, bucket_name, object_key):
+    """Downloads an object from S3 and returns its content as bytes."""
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+        return response["Body"].read()
+    except ClientError as e:
+        logger.error(f"S3 client error on get_object: {e}")
+        raise ValueError(f"Failed to download file from S3: {e}")
+
+
+def _generate_transformed_key(original_key):
+    """Generates the key for the transformed (output) file."""
+    # Takes the base filename and puts it in the 'transformed/' prefix.
+    # Example: 'path/to/file.csv' -> 'transformed/file.csv'
+    base_filename = original_key.split('/')[-1]
+    return f"transformed/{base_filename}"
+
+
+def _upload_s3_object(s3_client, bucket_name, object_key, data_bytes):
+    """Uploads a bytes object to a specified S3 location."""
+    try:
+        s3_client.put_object(Bucket=bucket_name, Key=object_key, Body=data_bytes)
+        logger.info(f"Successfully uploaded to s3://{bucket_name}/{object_key}")
+    except ClientError as e:
+        logger.error(f"S3 client error on put_object: {e}")
+        raise ValueError(f"Failed to save obfuscated file to S3: {e}")
+
+
 def obfuscate_data(params, s3_client, return_bytes=True):
     if not isinstance(params, dict):
         raise ValueError("Step Function must pass event as a JSON object")
@@ -59,68 +107,30 @@ def obfuscate_data(params, s3_client, return_bytes=True):
     if "file_to_obfuscate" not in params:
         raise ValueError("Missing required parameter: file_to_obfuscate")
     
-    # backet_name, object_key = parse_s3_url("s3://gdpr-ingestion-bucket/uk_student_records_1000.csv")
-    # pii_fields = ["name", "email_address"]
     bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
     pii_fields = params.get("pii_fields")
 
     if not pii_fields or not isinstance(pii_fields, list):
         raise ValueError("Missing or invalid required parameter: pii_fields (list expected)")
-    
+
     logger.info(f"Processing S3 object: s3://{bucket_name}/{object_key}")
-    
-    try:
-        # head_object retrieves metadata from an object to get its size (ContentLength is in bytes).
-        # head = {'ResponseMetadata': {'RequestId': '...', 'HostId': '...', 'HTTPStatusCode': 200, ...},
-        # 'ContentLength': 12345, 'ContentType': 'text/csv', ...}.
-        head = s3_client.head_object(Bucket=bucket_name, Key=object_key)
-        content_length = head.get("ContentLength", 0)
-        if content_length > MAX_FILE_SIZE:
-            raise ValueError(f"File too large: {content_length} bytes (max {MAX_FILE_SIZE})")
-        if content_length == 0:
-            raise ValueError(f"File is empty: s3://{bucket_name}/{object_key}")
-    except s3_client.exceptions.NoSuchKey:
-        raise ValueError(f"File not found: s3://{bucket_name}/{object_key}")
-    except Exception as e:
-        if "File too large" in str(e):
-            raise
-        logger.warning(f"Could not check file size: {str(e)}")
-    
-    try:
-        # get_object retrieves the actual file from S3.
-        # response["Body"] is a StreamingBody, which has a read() method to get the file bytes.
-        # body = b'...' (file content in bytes)
-        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-        body = response["Body"].read()
-    except Exception as e:
-        raise ValueError(f"Failed to download file from S3: {str(e)}")
-    
+
+    _validate_and_get_s3_metadata(s3_client, bucket_name, object_key)
+    body = _download_s3_object(s3_client, bucket_name, object_key)
+
     file_format = get_file_format(object_key)
-    
     df = read_df_from_bytes(file_format, body)
     logger.info(f"Loaded DataFrame with {len(df)} rows and {len(df.columns)} columns")
     
     df_obfuscated = obfuscate_df(df, pii_fields)
     output_bytes = write_df_to_bytes(df_obfuscated, file_format)
     
-    transformed_key = f"transformed/{object_key.split('/')[-1]}"
-    try:
-        # put_object uploads the obfuscated data back to S3 under "transformed/" prefix.
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=transformed_key,
-            Body=output_bytes
-        )
-        logger.info(f"Obfuscated file saved to s3://{bucket_name}/{transformed_key}")
-    except Exception as e:
-        logger.error(f"Failed to save obfuscated file to S3: {str(e)}")
-        raise ValueError(f"Failed to save obfuscated file to S3: {str(e)}")
+    transformed_key = _generate_transformed_key(object_key)
+    _upload_s3_object(s3_client, bucket_name, transformed_key, output_bytes)
     
     if return_bytes:
-        # output_bytes = b'...' (obfuscated file content in bytes)
         return output_bytes
     else:
-        # Return a summary dictionary instead of raw bytes
         return {
             "status": "success",
             "original_size": len(body),
