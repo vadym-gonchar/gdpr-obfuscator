@@ -1,5 +1,6 @@
 import logging
 import json
+import boto3
 from s3_utils import obfuscate_data
 
 logger = logging.getLogger()
@@ -12,7 +13,8 @@ def lambda_handler(event, context):
     try:
         # Parameters are now nested under the "Input" key by the Step Function
         params = event.get("Input", event)
-        result = obfuscate_data(params, return_bytes=False)
+        s3_client = boto3.client("s3")
+        result = obfuscate_data(params, s3_client, return_bytes=False)
         logger.info("File obfuscated successfully")
         return result
 
