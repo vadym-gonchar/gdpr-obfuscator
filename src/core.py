@@ -7,6 +7,22 @@ from config import SUPPORTED_FORMATS
 logger = logging.getLogger(__name__)
 
 def read_df_from_bytes(file_format, data):
+    """
+    Reads byte data into a pandas DataFrame based on the specified file format.
+
+    Supports CSV, JSON, and Parquet formats. For CSV, it attempts to read
+    with UTF-8 encoding and falls back to latin1 on error.
+
+    Args:
+        file_format (str): The format of the file ('csv', 'json', 'parquet').
+        data (bytes): The raw byte content of the file.
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame containing the loaded data.
+
+    Raises:
+        ValueError: If the file format is unsupported or if reading the data fails.
+    """
     if file_format not in SUPPORTED_FORMATS:
         raise ValueError(f"Unsupported file format: {file_format}")
     
@@ -25,12 +41,36 @@ def read_df_from_bytes(file_format, data):
 
 
 def obfuscate_value_mask(value):
+    """
+    Obfuscates a single value by replacing it with '****'.
+
+    If the value is NaN or None, it is returned unchanged.
+
+    Args:
+        value: The value to obfuscate.
+
+    Returns:
+        The obfuscated value or the original value if it's null.
+    """
     if pd.isna(value):
         return value
     return "****"
 
 
 def obfuscate_df(df, pii_fields):
+    """
+    Obfuscates specified columns in a pandas DataFrame.
+
+    It creates a copy of the DataFrame and applies the `obfuscate_value_mask`
+    function to each column listed in `pii_fields`.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        pii_fields (list): A list of column names to obfuscate.
+
+    Returns:
+        pd.DataFrame: A new DataFrame with the specified fields obfuscated.
+    """
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input data is not a pandas DataFrame")
     
@@ -58,6 +98,21 @@ def obfuscate_df(df, pii_fields):
 
 
 def write_df_to_bytes(df, file_format):
+    """
+    Writes a pandas DataFrame to a byte string in the specified format.
+
+    Supports CSV, JSON, and Parquet formats.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to write.
+        file_format (str): The target format ('csv', 'json', 'parquet').
+
+    Returns:
+        bytes: The DataFrame content as a byte string.
+
+    Raises:
+        ValueError: If the file format is unsupported or if writing fails.
+    """
     if file_format not in SUPPORTED_FORMATS:
         raise ValueError(f"Unsupported file format: {file_format}")
     
