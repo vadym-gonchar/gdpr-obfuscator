@@ -3,7 +3,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = var.log_retention_days
 }
 
-# Политика для записи логов Lambda в CloudWatch
+# Defines the IAM policy document for writing logs to CloudWatch.
 data "aws_iam_policy_document" "lambda_cloudwatch_policy_doc" {
   statement {
     sid    = "CloudWatchLogsForLambda"

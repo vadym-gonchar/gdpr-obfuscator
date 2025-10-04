@@ -3,7 +3,7 @@ data "aws_s3_bucket" "s3_ingestion_zone" {
   bucket = var.s3_bucket_name
 }
 
-# Объединенная политика для CloudWatch и S3
+# Merges the CloudWatch and S3 policy documents into a single policy.
 data "aws_iam_policy_document" "lambda_inline_policy_doc" {
   source_policy_documents = [
     data.aws_iam_policy_document.lambda_cloudwatch_policy_doc.json,
@@ -11,7 +11,7 @@ data "aws_iam_policy_document" "lambda_inline_policy_doc" {
   ]
 }
 
-# Политика для доступа Lambda к S3
+# Defines the IAM policy document granting Lambda access to the S3 bucket.
 data "aws_iam_policy_document" "lambda_s3_policy_doc" {
   statement {
     sid    = "S3ReadWriteForObfuscator"
