@@ -2,7 +2,7 @@ import logging
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
 from core import read_df_from_bytes, obfuscate_df, write_df_to_bytes
-from config import MAX_FILE_SIZE, SUPPORTED_FORMATS
+from config import MAX_FILE_SIZE, SUPPORTED_FORMATS, TRANSFORMED_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ def _generate_transformed_key(original_key):
         str: The new key for the transformed file.
     """
     base_filename = original_key.split('/')[-1]
-    return f"transformed/{base_filename}"
+    return f"{TRANSFORMED_PREFIX}{base_filename}"
 
 
 def _upload_s3_object(s3_client, bucket_name, object_key, data_bytes):
@@ -199,17 +199,9 @@ def obfuscate_data(params, s3_client, return_bytes=True):
         raise ValueError("Step Function must pass event as a JSON object")
 
     if "file_to_obfuscate" not in params:
-    # Handle different input formats: either a full S3 URI or separate bucket/key.
-    if "file_to_obfuscate" in params:
-        bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
-    elif "s3_bucket" in params and "s3_key" in params:
-        bucket_name = params["s3_bucket"]
-        object_key = params["s3_key"]
-    else:
         raise ValueError("Missing required parameter: file_to_obfuscate")
     
     bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
-    # bucket_name, object_key = parse_s3_url(params["file_to_obfuscate"])
     pii_fields = params.get("pii_fields")
 
     if not pii_fields or not isinstance(pii_fields, list):

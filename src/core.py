@@ -2,7 +2,6 @@ import io
 import pandas as pd
 import logging
 
-from config import SUPPORTED_FORMATS
 from config import SUPPORTED_FORMATS, OBFUSCATION_MASK
 
 logger = logging.getLogger(__name__)
@@ -55,7 +54,6 @@ def obfuscate_value_mask(value):
     """
     if pd.isna(value):
         return value
-    return "****"
     return OBFUSCATION_MASK
 
 

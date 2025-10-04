@@ -16,10 +16,6 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python main.py '<json-params>'")
         sys.exit(1)
-    params = json.loads(sys.argv[1])
-    s3_client = boto3.client("s3")
-    result = obfuscate_data(params, s3_client, return_bytes=False)
-    print(json.dumps(result, indent=2))
     
     try:
         params = json.loads(sys.argv[1])
