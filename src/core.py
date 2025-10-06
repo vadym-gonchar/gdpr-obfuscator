@@ -78,7 +78,6 @@ def obfuscate_df(df, pii_fields):
         logger.warning("No PII fields specified, returning original DataFrame")
         return df.copy()
     
-    # Check which PII fields actually exist in the DataFrame
     missing_fields = [field for field in pii_fields if field not in df.columns]
     if missing_fields:
         logger.warning(f"PII fields not found in data: {missing_fields}")
@@ -118,11 +117,11 @@ def write_df_to_bytes(df, file_format):
     
     try:
         if file_format == "csv":
-            buffer = io.StringIO() # Use StringIO for text data
+            buffer = io.StringIO()
             df.to_csv(buffer, index=False)
             return buffer.getvalue().encode("utf-8")
         elif file_format == "json":
-            buffer = io.StringIO() # Use StringIO for text data
+            buffer = io.StringIO()
             df.to_json(buffer, orient="records", force_ascii=False)
             return buffer.getvalue().encode("utf-8")
         elif file_format == "parquet":

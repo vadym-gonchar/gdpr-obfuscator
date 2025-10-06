@@ -6,7 +6,6 @@ from config import MAX_FILE_SIZE, SUPPORTED_FORMATS, TRANSFORMED_PREFIX
 
 logger = logging.getLogger(__name__)
 
-# s3_url = 's3://gdpr-ingestion-bucket/uk_student_records_1000.csv'
 def parse_s3_url(s3_url):
     """
     Parses an S3 URL to extract the bucket name and object key.
@@ -27,10 +26,7 @@ def parse_s3_url(s3_url):
         raise ValueError("S3 URL cannot be empty")
     
     parsed = urlparse(s3_url)
-    # parsed=ParseResult(scheme='s3', netloc='gdpr-ingestion-bucket', 
-    # path='/uk_student_records_1000.csv', params='', query='', fragment='')
 
-    # Handle s3://bucket/key format
     if parsed.scheme == "s3":
         bucket = parsed.netloc
         key = parsed.path.lstrip("/")
@@ -38,7 +34,6 @@ def parse_s3_url(s3_url):
             raise ValueError("S3 URL missing bucket or key")
         return bucket, key
     
-    # Handle URLs like https://bucket.s3.amazonaws.com/key or https://s3.amazonaws.com/bucket/key
     if parsed.scheme in ("http", "https"):
         netloc_parts = parsed.netloc.split(".")
         if len(netloc_parts) >= 3 and netloc_parts[1].startswith("s3"):
@@ -109,7 +104,6 @@ def _validate_and_get_s3_metadata(s3_client, bucket_name, object_key):
         if e.response['Error']['Code'] == 'NoSuchKey':
             raise ValueError(f"File not found: s3://{bucket_name}/{object_key}")
         else:
-            # Handle other client errors like access denied
             logger.error(f"S3 client error on head_object: {e}")
             raise ValueError(f"Could not access file metadata: {e}")
 
