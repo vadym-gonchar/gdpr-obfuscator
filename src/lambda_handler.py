@@ -8,7 +8,7 @@ the necessary parameters, and invokes the core data obfuscation logic.
 import logging
 import json
 import boto3
-from s3_utils import obfuscate_data
+from .s3_utils import obfuscate_data
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

@@ -6,7 +6,7 @@ import sys
 import json
 import boto3
 import logging
-from s3_utils import obfuscate_data
+from .s3_utils import obfuscate_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 

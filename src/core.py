@@ -2,7 +2,7 @@ import io
 import pandas as pd
 import logging
 
-from config import SUPPORTED_FORMATS, OBFUSCATION_MASK
+from .config import SUPPORTED_FORMATS, OBFUSCATION_MASK
 
 logger = logging.getLogger(__name__)
 

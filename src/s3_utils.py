@@ -1,8 +1,8 @@
 import logging
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
-from core import read_df_from_bytes, obfuscate_df, write_df_to_bytes
-from config import MAX_FILE_SIZE, SUPPORTED_FORMATS, TRANSFORMED_PREFIX
+from .core import read_df_from_bytes, obfuscate_df, write_df_to_bytes
+from .config import MAX_FILE_SIZE, SUPPORTED_FORMATS, TRANSFORMED_PREFIX
 
 logger = logging.getLogger(__name__)
 
