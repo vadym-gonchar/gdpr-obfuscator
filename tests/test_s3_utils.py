@@ -14,6 +14,7 @@ from src.s3_utils import (
     _generate_transformed_key,
     _upload_s3_object,
     obfuscate_data,
+    read_df_from_bytes,
 )
 from src.config import MAX_FILE_SIZE
 
@@ -187,41 +188,52 @@ class TestObfuscateDataWithMoto:
             )
             yield client
 
-    def test_obfuscate_data_happy_path_csv(self, s3):
+    @pytest.mark.parametrize(
+        "file_format, pii_fields",
+        [
+            ("csv", ["name", "email"]),
+            ("json", ["name", "email"]),
+            ("parquet", ["name", "email"]),
+        ],
+    )
+    def test_obfuscate_data_happy_path(self, s3, file_format, pii_fields):
         """
         Tests the full obfuscation cycle: download from S3, obfuscate, upload to S3.
+        This test is parametrized to run for all supported file formats.
         """
-        # 1. Setup: Upload a sample CSV to the mock S3
-        original_key = "source/data.csv"
-        original_content = "id,name,email\n1,John Doe,john@example.com"
-        s3.put_object(
-            Bucket=self.BUCKET_NAME, Key=original_key, Body=original_content
-        )
+        # 1. Setup: Create sample data and upload to mock S3 in the correct format
+        original_key = f"source/data.{file_format}"
+        sample_df = pd.DataFrame({
+            "id": [1], "name": ["John Doe"], "email": ["john@example.com"]
+        })
+        
+        # Use a helper from core to create the byte content
+        from src.core import write_df_to_bytes
+        original_content_bytes = write_df_to_bytes(sample_df, file_format)
+
+        s3.put_object(Bucket=self.BUCKET_NAME, Key=original_key, Body=original_content_bytes)
 
         params = {
             "file_to_obfuscate": f"s3://{self.BUCKET_NAME}/{original_key}",
-            "pii_fields": ["name", "email"],
+            "pii_fields": pii_fields,
         }
 
         # 2. Execute the function
         result = obfuscate_data(params, s3, return_bytes=False)
 
         # 3. Assertions
-        # Check the summary response
-        transformed_key = "transformed/data.csv"
+        transformed_key = f"transformed/data.{file_format}"
         assert result["status"] == "success"
         assert result["output_s3_path"] == f"s3://{self.BUCKET_NAME}/{transformed_key}"
 
         # Verify the uploaded file content
         response = s3.get_object(Bucket=self.BUCKET_NAME, Key=transformed_key)
-        obfuscated_content = response["Body"].read().decode("utf-8")
+        obfuscated_bytes = response["Body"].read()
+        obfuscated_df = read_df_from_bytes(file_format, obfuscated_bytes)
 
-        assert "John Doe" not in obfuscated_content
-        assert "john@example.com" not in obfuscated_content
-        assert "****" in obfuscated_content
-        # Check that the header and non-pii data are still there
-        assert "id,name,email" in obfuscated_content
-        assert "1,****,****" in obfuscated_content
+        assert obfuscated_df["id"][0] == 1
+        assert obfuscated_df["name"][0] == "****"
+        assert obfuscated_df["email"][0] == "****"
 
     def test_obfuscate_data_file_not_found(self, s3):
         """Tests that a ValueError is raised if the source file doesn't exist."""
