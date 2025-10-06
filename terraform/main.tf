@@ -8,7 +8,7 @@ terraform {
 
   backend "s3" {
     region = "eu-west-2"
-    bucket = "gdpr-obfuscator-statefiles" # REPLACE with your bucket
+    bucket = "gdpr-obfuscator-statefiles" # REPLACE with your statefile bucket name. It should exist before the first deployment.
     key    = "extract-statefile"
   }
 }

@@ -9,7 +9,7 @@ variable "lambda_name" {
 # Name of the S3 bucket for data ingestion.
 variable "s3_bucket_name" {
   type    = string
-  default = "gdpr-ingestion-bucket"
+  default = "gdpr-ingestion-bucket" #REPLACE with your bucket name where obfuscated files will be stored. It should exist before the first deployment.
 }
 
 # Name for the Step Function state machine.
