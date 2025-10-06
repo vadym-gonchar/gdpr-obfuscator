@@ -101,7 +101,7 @@ def _validate_and_get_s3_metadata(s3_client, bucket_name, object_key):
             raise ValueError(f"File is empty: s3://{bucket_name}/{object_key}")
         return head
     except ClientError as e:
-        if e.response['Error']['Code'] == 'NoSuchKey':
+        if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
             raise ValueError(f"File not found: s3://{bucket_name}/{object_key}")
         else:
             logger.error(f"S3 client error on head_object: {e}")

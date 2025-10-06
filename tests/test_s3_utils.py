@@ -2,8 +2,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
 from botocore.exceptions import ClientError
+from moto import mock_aws
+import os
+import boto3
 
-from s3_utils import (
+from src.s3_utils import (
     parse_s3_url,
     get_file_format,
     _validate_and_get_s3_metadata,
@@ -12,7 +15,7 @@ from s3_utils import (
     _upload_s3_object,
     obfuscate_data,
 )
-from config import MAX_FILE_SIZE
+from src.config import MAX_FILE_SIZE
 
 
 @pytest.mark.parametrize(
@@ -113,12 +116,12 @@ class TestS3Interactions:
         )
 
 
-@patch("s3_utils._validate_and_get_s3_metadata")
-@patch("s3_utils._download_s3_object")
-@patch("s3_utils.read_df_from_bytes")
-@patch("s3_utils.obfuscate_df")
-@patch("s3_utils.write_df_to_bytes")
-@patch("s3_utils._upload_s3_object")
+@patch("src.s3_utils._validate_and_get_s3_metadata")
+@patch("src.s3_utils._download_s3_object")
+@patch("src.s3_utils.read_df_from_bytes")
+@patch("src.s3_utils.obfuscate_df")
+@patch("src.s3_utils.write_df_to_bytes")
+@patch("src.s3_utils._upload_s3_object")
 def test_obfuscate_data_orchestration(
     mock_upload, mock_write, mock_obfuscate, mock_read, mock_download, mock_validate
 ):
@@ -155,3 +158,83 @@ def test_obfuscate_data_orchestration(
     # Check the final result dictionary
     assert result["status"] == "success"
     assert result["output_s3_path"] == "s3://my-bucket/transformed/my-file.csv"
+
+
+class TestObfuscateDataWithMoto:
+    """
+    Integration tests for the obfuscate_data orchestrator using moto to mock AWS.
+    """
+
+    BUCKET_NAME = "test-bucket"
+    REGION = "eu-west-2"
+
+    @pytest.fixture(scope="class")
+    def aws_credentials(self):
+        """Mocked AWS Credentials for moto."""
+        os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+        os.environ["AWS_SECURITY_TOKEN"] = "testing"
+        os.environ["AWS_SESSION_TOKEN"] = "testing"
+        os.environ["AWS_DEFAULT_REGION"] = self.REGION
+
+    @pytest.fixture(scope="class")
+    def s3(self, aws_credentials):
+        with mock_aws():
+            client = boto3.client("s3", region_name=self.REGION)
+            client.create_bucket(
+                Bucket=self.BUCKET_NAME,
+                CreateBucketConfiguration={"LocationConstraint": self.REGION},
+            )
+            yield client
+
+    def test_obfuscate_data_happy_path_csv(self, s3):
+        """
+        Tests the full obfuscation cycle: download from S3, obfuscate, upload to S3.
+        """
+        # 1. Setup: Upload a sample CSV to the mock S3
+        original_key = "source/data.csv"
+        original_content = "id,name,email\n1,John Doe,john@example.com"
+        s3.put_object(
+            Bucket=self.BUCKET_NAME, Key=original_key, Body=original_content
+        )
+
+        params = {
+            "file_to_obfuscate": f"s3://{self.BUCKET_NAME}/{original_key}",
+            "pii_fields": ["name", "email"],
+        }
+
+        # 2. Execute the function
+        result = obfuscate_data(params, s3, return_bytes=False)
+
+        # 3. Assertions
+        # Check the summary response
+        transformed_key = "transformed/data.csv"
+        assert result["status"] == "success"
+        assert result["output_s3_path"] == f"s3://{self.BUCKET_NAME}/{transformed_key}"
+
+        # Verify the uploaded file content
+        response = s3.get_object(Bucket=self.BUCKET_NAME, Key=transformed_key)
+        obfuscated_content = response["Body"].read().decode("utf-8")
+
+        assert "John Doe" not in obfuscated_content
+        assert "john@example.com" not in obfuscated_content
+        assert "****" in obfuscated_content
+        # Check that the header and non-pii data are still there
+        assert "id,name,email" in obfuscated_content
+        assert "1,****,****" in obfuscated_content
+
+    def test_obfuscate_data_file_not_found(self, s3):
+        """Tests that a ValueError is raised if the source file doesn't exist."""
+        params = {
+            "file_to_obfuscate": f"s3://{self.BUCKET_NAME}/non_existent_file.csv",
+            "pii_fields": ["email"],
+        }
+        with pytest.raises(ValueError, match="File not found"):
+            obfuscate_data(params, s3)
+
+    def test_obfuscate_data_empty_file(self, s3):
+        """Tests that a ValueError is raised for an empty source file."""
+        s3.put_object(Bucket=self.BUCKET_NAME, Key="empty.csv", Body="")
+        params = {"file_to_obfuscate": f"s3://{self.BUCKET_NAME}/empty.csv", "pii_fields": ["email"]}
+        with pytest.raises(ValueError, match="File is empty"):
+            obfuscate_data(params, s3)

@@ -2,13 +2,13 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from core import (
+from src.core import (
     read_df_from_bytes,
     obfuscate_df,
     write_df_to_bytes,
     obfuscate_value_mask,
 )
-from config import OBFUSCATION_MASK
+from src.config import OBFUSCATION_MASK
 
 
 @pytest.fixture
