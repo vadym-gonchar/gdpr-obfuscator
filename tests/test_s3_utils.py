@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
+import pandas as pd
 from botocore.exceptions import ClientError
 
 from s3_utils import (
@@ -128,7 +129,7 @@ def test_obfuscate_data_orchestration(
     # --- Setup Mocks ---
     mock_s3_client = MagicMock()
     mock_download.return_value = b"original_bytes"
-    mock_read.return_value = "dataframe"  # Using string for simplicity
+    mock_read.return_value = pd.DataFrame({"email": ["test@test.com"]})
     mock_obfuscate.return_value = "obfuscated_dataframe"
     mock_write.return_value = b"output_bytes"
 
@@ -145,7 +146,7 @@ def test_obfuscate_data_orchestration(
     mock_validate.assert_called_once_with(mock_s3_client, "my-bucket", "my-file.csv")
     mock_download.assert_called_once_with(mock_s3_client, "my-bucket", "my-file.csv")
     mock_read.assert_called_once_with("csv", b"original_bytes")
-    mock_obfuscate.assert_called_once_with("dataframe", ["email"])
+    mock_obfuscate.assert_called_once_with(mock_read.return_value, ["email"])
     mock_write.assert_called_once_with("obfuscated_dataframe", "csv")
     mock_upload.assert_called_once_with(
         mock_s3_client, "my-bucket", "transformed/my-file.csv", b"output_bytes"
