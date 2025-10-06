@@ -46,6 +46,14 @@ class TestReadWrite:
         # Parquet can sometimes alter types, so we compare for equality after conversion
         assert_frame_equal(sample_df, read_back_df, check_dtype=False)
 
+    def test_write_empty_df(self):
+        """Tests that writing an empty DataFrame produces a valid (non-empty) byte output."""
+        empty_df = pd.DataFrame({"col1": [], "col2": []})
+        output_bytes = write_df_to_bytes(empty_df, "csv")
+        assert isinstance(output_bytes, bytes)
+        # For CSV, it should contain at least the header
+        assert output_bytes == b"col1,col2\n"
+
     def test_read_unsupported_format(self):
         """Tests that reading an unsupported format raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported file format: xml"):
@@ -126,3 +134,12 @@ class TestObfuscation:
         # The returned DataFrame should be an identical copy
         assert_frame_equal(sample_df, obfuscated_df)
         assert "None of the specified PII fields found" in caplog.text
+
+    def test_obfuscate_empty_df(self):
+        """Tests that obfuscating an empty DataFrame works correctly."""
+        empty_df = pd.DataFrame({"id": [], "name": []})
+        pii_fields = ["name"]
+        obfuscated_df = obfuscate_df(empty_df, pii_fields)
+
+        assert obfuscated_df.empty
+        assert list(obfuscated_df.columns) == ["id", "name"]
