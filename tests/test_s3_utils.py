@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 
-from src.s3_utils import (
+from s3_utils import (
     parse_s3_url,
     get_file_format,
     _validate_and_get_s3_metadata,
@@ -11,7 +11,7 @@ from src.s3_utils import (
     _upload_s3_object,
     obfuscate_data,
 )
-from src.config import MAX_FILE_SIZE
+from config import MAX_FILE_SIZE
 
 
 @pytest.mark.parametrize(
@@ -112,12 +112,12 @@ class TestS3Interactions:
         )
 
 
-@patch("src.s3_utils._validate_and_get_s3_metadata")
-@patch("src.s3_utils._download_s3_object")
-@patch("src.s3_utils.read_df_from_bytes")
-@patch("src.s3_utils.obfuscate_df")
-@patch("src.s3_utils.write_df_to_bytes")
-@patch("src.s3_utils._upload_s3_object")
+@patch("s3_utils._validate_and_get_s3_metadata")
+@patch("s3_utils._download_s3_object")
+@patch("s3_utils.read_df_from_bytes")
+@patch("s3_utils.obfuscate_df")
+@patch("s3_utils.write_df_to_bytes")
+@patch("s3_utils._upload_s3_object")
 def test_obfuscate_data_orchestration(
     mock_upload, mock_write, mock_obfuscate, mock_read, mock_download, mock_validate
 ):
