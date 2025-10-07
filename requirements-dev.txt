@@ -6,3 +6,4 @@ pytest
 pytest-cov
 moto[s3]
 Faker
+bandit
