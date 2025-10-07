@@ -52,14 +52,18 @@ This project provides a general-purpose tool to process data being ingested into
 
 You can run the obfuscation process locally by passing parameters as a JSON string.
 
+**CSV Example**
 ```bash
-# Example for CSV
 python -m src.main '{"file_to_obfuscate": "s3://your-bucket/your-file.csv", "pii_fields": ["name", "email"]}'
+```
 
-# Example for JSON
+**JSON Example**
+```bash
 python -m src.main '{"file_to_obfuscate": "s3://your-bucket/your-file.json", "pii_fields": ["name", "email"]}'
+```
 
-# Example for Parquet
+**Parquet Example**
+```bash
 python -m src.main '{"file_to_obfuscate": "s3://your-bucket/your-file.parquet", "pii_fields": ["name", "email"]}'
 ```
 
