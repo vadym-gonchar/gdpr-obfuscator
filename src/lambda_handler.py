@@ -5,10 +5,9 @@ This script defines the entry point for the AWS Lambda function. It receives
 an event, typically from an AWS Step Function or another trigger, extracts
 the necessary parameters, and invokes the core data obfuscation logic.
 """
-import logging
 import json
-import boto3
-from .s3_utils import obfuscate_data
+import logging
+from .main import run_obfuscation
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -33,9 +32,8 @@ def lambda_handler(event, context):
 
     try:
         params = event.get("Input", event)
-        s3_client = boto3.client("s3")
-        result = obfuscate_data(params, s3_client, return_bytes=False)
-        logger.info("File obfuscated successfully")
+        result = run_obfuscation(params)
+        logger.info(f"File obfuscated successfully. Result: {json.dumps(result)}")
         return result
 
     except ValueError as e:
