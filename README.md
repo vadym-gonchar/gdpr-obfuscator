@@ -123,6 +123,33 @@ print(result_summary)
       --input '{"file_to_obfuscate": "s3://gdpr-ingestion-bucket/uk_student_records_1000.parquet", "pii_fields": ["name", "email_address"]}'
     ```
 
+### Deploying with Terraform
+
+As an alternative to manual setup, you can use the provided Terraform configuration to automate the deployment of the Lambda function and its associated IAM resources.
+
+1.  **Prerequisites:**
+    -   Terraform CLI installed.
+    -   Step 1 from the manual deployment (`Create a Deployment ZIP Archive`) completed to create `deployment_package.zip`. Terraform will use this archive.
+
+2.  **Navigate to the Terraform Directory:**
+    *(Assuming the Terraform files are located in a `terraform/` directory at the project root.)*
+    ```bash
+    cd terraform
+    ```
+
+3.  **Initialize Terraform:**
+    This command initializes the working directory containing the Terraform configuration files.
+    ```bash
+    terraform init
+    ```
+
+4.  **Apply the Configuration:**
+    This command applies the changes required to reach the desired state of the configuration.
+    ```bash
+    terraform apply
+    ```
+    You will be prompted to confirm the action by typing `yes`.
+
 ## 🧪 Testing and Code Quality
 
 ### Running Tests
